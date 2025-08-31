@@ -84,6 +84,10 @@ GMS2EXPORT double ext_get_virtual_screens(char* _GMSBuffPtrStr) {
     if (EnumDisplayMonitors(NULL, NULL, &MonitorEnum, reinterpret_cast<LPARAM>(&info)) != 0) {
         memcpy(&_GMSBuffer[currentWriteOffset], &info.Count, sizeof(info.Count));//Write the unsigned short int
         currentWriteOffset += sizeof(info.Count);//Increase the offset to write to the right position of the buffer
+        memcpy(&_GMSBuffer[currentWriteOffset], &info.Primary, sizeof(info.Primary));//Write the unsigned short int
+        currentWriteOffset += sizeof(info.Primary);//Increase the offset to write to the right position of the buffer
+        memcpy(&_GMSBuffer[currentWriteOffset], &info.More, sizeof(info.More));//Write the unsigned short int
+        currentWriteOffset += sizeof(info.More);//Increase the offset to write to the right position of the buffer
         for (int i = 0; i < info.Count; i++) {
             memcpy(&_GMSBuffer[currentWriteOffset], &info.Screen[i].left, sizeof(info.Screen[i].left));//Write the unsigned int
             currentWriteOffset += sizeof(info.Screen[i].left);//Increase the offset to write to the right position of the buffer
