@@ -28,6 +28,7 @@ struct ScreenArrayInfo
 {
     VirtScreen* Screen;
     int Primary;
+    bool More;
     int Count;
     int MaxCount;
 }; 
@@ -55,7 +56,10 @@ char* getGMSBuffAddress(char* _GMSBuffPtrStr) {
 static BOOL CALLBACK MonitorEnum(HMONITOR hMon, HDC hdc, LPRECT lprcMonitor, LPARAM pData)
 {
     ScreenArrayInfo* info = reinterpret_cast<ScreenArrayInfo*>(pData);
-    if (info->Count == info->MaxCount) return false;
+    if (info->Count == info->MaxCount) {
+        info->More = true;
+        return false;
+    }
     info->Screen[info->Count] = RectToScreen(hMon, lprcMonitor);
     info->Count++;
     return true;
@@ -63,16 +67,19 @@ static BOOL CALLBACK MonitorEnum(HMONITOR hMon, HDC hdc, LPRECT lprcMonitor, LPA
 
 #ifdef GMS_SHARED
 GMS2EXPORT double ext_get_virtual_screens(char* _GMSBuffPtrStr) {
+    const int MaxScreenCount = 4;
     char* _GMSBuffer = getGMSBuffAddress(_GMSBuffPtrStr);//Interpret the string address form GMS so it can be managed by C++
     //you can now do memcpy operations (or any other mem operations) to the buffer :)
 
     unsigned int currentWriteOffset = 0;//A value to know the offset to where we need to write in the buffer
 
-    VirtScreen screenArray[4];
+    VirtScreen screenArray[MaxScreenCount];
     ScreenArrayInfo info;
     info.Screen = screenArray;
+    info.Primary = -1;
+    info.More = false;
     info.Count = 0;
-    info.MaxCount = 4;
+    info.MaxCount = MaxScreenCount;
 
     if (EnumDisplayMonitors(NULL, NULL, &MonitorEnum, reinterpret_cast<LPARAM>(&info)) != 0) {
         memcpy(&_GMSBuffer[currentWriteOffset], &info.Count, sizeof(info.Count));//Write the unsigned short int
@@ -93,6 +100,7 @@ GMS2EXPORT double ext_get_virtual_screens(char* _GMSBuffPtrStr) {
             memcpy(&_GMSBuffer[currentWriteOffset], &info.Screen[i].monitorHandle, sizeof(info.Screen[i].monitorHandle));//Write the unsigned int
             currentWriteOffset += sizeof(info.Screen[i].monitorHandle);//Increase the offset to write to the right position of the buffer
         }
+        /* Could optionally blank remaining entries
         for (int i = info.Count; i < info.MaxCount; i++) {
             memset(&_GMSBuffer[currentWriteOffset], (LONG)0, sizeof(LONG));//Write null entries
             currentWriteOffset += sizeof(LONG);
@@ -105,7 +113,7 @@ GMS2EXPORT double ext_get_virtual_screens(char* _GMSBuffPtrStr) {
             memset(&_GMSBuffer[currentWriteOffset], (LONG64) 0, sizeof(LONG64));//Write null entries
             currentWriteOffset += sizeof(HMONITOR);
         }
-
+        */
 
         return 1;
     } else {
