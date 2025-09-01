@@ -16,11 +16,13 @@
 
 using namespace std;
 
+typedef int32_t wordbool;
+
 struct VirtScreen {
     LONG left;
     LONG top;
-    LONG width;
-    LONG height;
+    LONG right;
+    LONG bottom;
     HMONITOR monitorHandle;
 };
 
@@ -28,8 +30,9 @@ struct ScreenArrayInfo
 {
     VirtScreen* Screen;
     int Primary;
-    bool More;
+    wordbool More;
     int Count;
+    int Padding;
     int MaxCount;
 }; 
 
@@ -37,8 +40,8 @@ static VirtScreen RectToScreen(HMONITOR hMon, LPRECT lprcMonitor) {
     VirtScreen screen;
     screen.left = lprcMonitor->left;
     screen.top = lprcMonitor->top;
-    screen.width = abs(lprcMonitor->right - lprcMonitor->left);
-    screen.height = abs(lprcMonitor->bottom - lprcMonitor->top);
+    screen.right = lprcMonitor->right;
+    screen.bottom = lprcMonitor->bottom;
     screen.monitorHandle = hMon;
     return screen;
 }
@@ -79,6 +82,7 @@ GMS2EXPORT double ext_get_virtual_screens(char* _GMSBuffPtrStr) {
     info.Primary = -1;
     info.More = false;
     info.Count = 0;
+    info.Padding = 0;
     info.MaxCount = MaxScreenCount;
 
     if (EnumDisplayMonitors(NULL, NULL, &MonitorEnum, reinterpret_cast<LPARAM>(&info)) != 0) {
@@ -88,6 +92,8 @@ GMS2EXPORT double ext_get_virtual_screens(char* _GMSBuffPtrStr) {
         currentWriteOffset += sizeof(info.Primary);//Increase the offset to write to the right position of the buffer
         memcpy(&_GMSBuffer[currentWriteOffset], &info.More, sizeof(info.More));//Write the unsigned short int
         currentWriteOffset += sizeof(info.More);//Increase the offset to write to the right position of the buffer
+        memcpy(&_GMSBuffer[currentWriteOffset], &info.Padding, sizeof(info.Padding));//Write padding bytes (4)
+        currentWriteOffset += sizeof(info.Padding);//Increase the offset to write to the right position of the buffer
         for (int i = 0; i < info.Count; i++) {
             memcpy(&_GMSBuffer[currentWriteOffset], &info.Screen[i].left, sizeof(info.Screen[i].left));//Write the unsigned int
             currentWriteOffset += sizeof(info.Screen[i].left);//Increase the offset to write to the right position of the buffer
@@ -95,30 +101,12 @@ GMS2EXPORT double ext_get_virtual_screens(char* _GMSBuffPtrStr) {
             memcpy(&_GMSBuffer[currentWriteOffset], &info.Screen[i].top, sizeof(info.Screen[i].top));//Write the unsigned int
             currentWriteOffset += sizeof(info.Screen[i].top);//Increase the offset to write to the right position of the buffer
 
-            memcpy(&_GMSBuffer[currentWriteOffset], &info.Screen[i].width, sizeof(info.Screen[i].width));//Write the unsigned int
-            currentWriteOffset += sizeof(info.Screen[i].width);//Increase the offset to write to the right position of the buffer
+            memcpy(&_GMSBuffer[currentWriteOffset], &info.Screen[i].right, sizeof(info.Screen[i].right));//Write the unsigned int
+            currentWriteOffset += sizeof(info.Screen[i].right);//Increase the offset to write to the right position of the buffer
 
-            memcpy(&_GMSBuffer[currentWriteOffset], &info.Screen[i].height, sizeof(info.Screen[i].height));//Write the unsigned int
-            currentWriteOffset += sizeof(info.Screen[i].height);//Increase the offset to write to the right position of the buffer
-
-            memcpy(&_GMSBuffer[currentWriteOffset], &info.Screen[i].monitorHandle, sizeof(info.Screen[i].monitorHandle));//Write the unsigned int
-            currentWriteOffset += sizeof(info.Screen[i].monitorHandle);//Increase the offset to write to the right position of the buffer
+            memcpy(&_GMSBuffer[currentWriteOffset], &info.Screen[i].bottom, sizeof(info.Screen[i].bottom));//Write the unsigned int
+            currentWriteOffset += sizeof(info.Screen[i].bottom);//Increase the offset to write to the right position of the buffer
         }
-        /* Could optionally blank remaining entries
-        for (int i = info.Count; i < info.MaxCount; i++) {
-            memset(&_GMSBuffer[currentWriteOffset], (LONG)0, sizeof(LONG));//Write null entries
-            currentWriteOffset += sizeof(LONG);
-            memset(&_GMSBuffer[currentWriteOffset], (LONG)0, sizeof(LONG));//Write null entries
-            currentWriteOffset += sizeof(LONG);
-            memset(&_GMSBuffer[currentWriteOffset], (LONG)0, sizeof(LONG));//Write null entries
-            currentWriteOffset += sizeof(LONG);
-            memset(&_GMSBuffer[currentWriteOffset], (LONG)0, sizeof(LONG));//Write null entries
-            currentWriteOffset += sizeof(LONG);
-            memset(&_GMSBuffer[currentWriteOffset], (LONG64) 0, sizeof(LONG64));//Write null entries
-            currentWriteOffset += sizeof(HMONITOR);
-        }
-        */
-
         return 1;
     } else {
         return 0;
@@ -139,8 +127,8 @@ int main() {
             std::wcout << "Screen : " << i;
             std::wcout << " : Left : " << info.Screen[i].left;
             std::wcout << ", Top : " << info.Screen[i].top;
-            std::wcout << ", Width : " << info.Screen[i].width;
-            std::wcout << ", Height : " << info.Screen[i].height;
+            std::wcout << ", Width : " << abs(info.Screen[i].right - info.Screen[i].left);
+            std::wcout << ", Bottom : " << abs(info.Screen[i].bottom - info.Screen[i].top);
             std::wcout << ", Handle : " << (int64_t)info.Screen[i].monitorHandle;
             std::wcout << std::endl;
 
