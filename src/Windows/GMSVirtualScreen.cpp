@@ -6,7 +6,7 @@
 #else
 #define GMS2EXPORT extern "C"
 #endif
-#include <Windows.h>
+#include <windows.h>
 #include <cstring>
 #include <string>
 
@@ -114,6 +114,10 @@ GMS2EXPORT double ext_get_virtual_screens(char* _GMSBuffPtrStr) {
 
 }
 #else
+BOOL ext_get_virtual_screens(ScreenArrayInfo *info) {
+  return EnumDisplayMonitors(NULL, NULL, &MonitorEnum, reinterpret_cast<LPARAM>(info));
+}
+
 int main() {
     VirtScreen screenArray[4];
     ScreenArrayInfo info;
@@ -121,7 +125,7 @@ int main() {
     info.Count = 0;
     info.MaxCount = 4;
 
-    if (EnumDisplayMonitors(NULL, NULL, &MonitorEnum, reinterpret_cast<LPARAM>(&info)) != 0) {
+    if (ext_get_virtual_screens(&info)) {
         std::wcout << "Screen Count: " << info.Count << std::endl;
         for (int i = 0; i < info.Count; i++) {
             std::wcout << "Screen : " << i;

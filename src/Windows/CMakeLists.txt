@@ -6,9 +6,10 @@ cmake_minimum_required(VERSION 4.0)
 if(GMS_SHARED)
     add_compile_options(-DGMS_SHARED)
 	add_library (GMSVirtualScreen SHARED "GMSVirtualScreen.cpp" )
-    
 else()
 	add_executable (GMSVirtualScreen "GMSVirtualScreen.cpp" )
+	add_executable (refresh "refresh.cpp" )
+	add_executable (base "base.cpp" )
 endif()
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
