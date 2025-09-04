@@ -7,17 +7,10 @@ if (POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
 option(GMS_SHARED "Build Shared Library" OFF)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # Add source to this project's executable.
-if(GMS_SHARED)
-    add_compile_options(-DGMS_SHARED)
-	add_library (GMSVirtualScreen SHARED "GMSVirtualScreen.cpp" )
-    
-else()
-	add_executable (GMSVirtualScreen "GMSVirtualScreen.cpp" )
+if(1)
+    add_subdirectory("src")
 endif()
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET GMSVirtualScreen PROPERTY CXX_STANDARD 20)
-endif()
-
-# TODO: Add tests and install targets if needed.
