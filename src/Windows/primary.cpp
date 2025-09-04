@@ -33,6 +33,7 @@ std::string TCHAR_to_string(const TCHAR *tstr) {
 
 // Structure to hold monitor information
 struct MonitorInfo {
+  bool isPrimary;                // <<< ADDED: True if this is the primary monitor
   std::string deviceName;        // e.g., \\.\DISPLAY1
   std::string deviceDescription; // e.g., Generic PnP Monitor, Dell U2719DC
 
@@ -40,7 +41,7 @@ struct MonitorInfo {
   // ---
   int nativePixelWidth;
   int nativePixelHeight;
-  int refreshRate; // <<< ADDED: To store the refresh rate in Hz
+  int refreshRate;
 
   // --- Virtual Desktop Coordinates (Monitor's position and size within the
   // virtual screen) --- This is how the monitor is laid out in the overall
@@ -68,6 +69,9 @@ BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor,
 
   if (GetMonitorInfo(hMonitor, &monitorInfo)) {
     MonitorInfo currentMonitor;
+
+    // <<< MODIFIED: Check the dwFlags member for the primary monitor flag
+    currentMonitor.isPrimary = (monitorInfo.dwFlags & MONITORINFOF_PRIMARY);
 
     currentMonitor.deviceName = TCHAR_to_string(monitorInfo.szDevice);
 
@@ -121,7 +125,6 @@ BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor,
                               &devMode, 0)) {
       currentMonitor.nativePixelWidth = devMode.dmPelsWidth;
       currentMonitor.nativePixelHeight = devMode.dmPelsHeight;
-      // <<< MODIFIED: Get the refresh rate from the DEVMODE struct
       currentMonitor.refreshRate = devMode.dmDisplayFrequency;
     } else {
       std::cerr << "Warning: Could not get native pixel resolution for monitor '"
@@ -133,7 +136,6 @@ BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor,
           monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
       currentMonitor.nativePixelHeight =
           monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.left;
-      // <<< MODIFIED: Set refresh rate to 0 on failure
       currentMonitor.refreshRate = 0;
     }
 
@@ -183,12 +185,14 @@ int main() {
   std::cout << "Detected Windows Monitors (Per Screen):\n";
   for (const auto &mon : monitors) {
     std::cout << "----------------------------------------\n";
+    // <<< MODIFIED: Print the primary monitor status
+    std::cout << "Is Primary Monitor:           " << (mon.isPrimary ? "Yes" : "No")
+              << "\n";
     std::cout << "Device Name:                  " << mon.deviceName << "\n";
     std::cout << "Device Description:           " << mon.deviceDescription
               << "\n";
     std::cout << "Native Pixel Resolution:      " << mon.nativePixelWidth
               << " x " << mon.nativePixelHeight << " pixels\n";
-    // <<< MODIFIED: Print the refresh rate
     std::cout << "Refresh Rate:                 " << mon.refreshRate << " Hz\n";
     std::cout << "Virtual Desktop Position:     (" << mon.virtualDesktopX
               << ", " << mon.virtualDesktopY << ")\n";
