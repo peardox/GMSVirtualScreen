@@ -55,8 +55,8 @@ struct ScreenArrayInfo {
 
 // Declare the functions that the library will export.
 // The SCREEN_API macro marks them for export.
-extern "C" SCREEN_API BOOL ext_get_virtual_screens(ScreenArrayInfo* info);
-extern "C" SCREEN_API char* getGMSBuffAddress(char* _GMSBuffPtrStr);
+extern "C" SCREEN_API double ext_get_virtual_screens(char* buf);
 extern "C" SCREEN_API double ext_get_virtual_screens_buffer_size();
+extern "C" SCREEN_API BOOL __internal_get_virtual_screens(ScreenArrayInfo* info);
 
 #endif // SCREEN_UTILS_H

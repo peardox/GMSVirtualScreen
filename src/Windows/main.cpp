@@ -14,7 +14,7 @@ int main() {
     info.more = false;
 
     // Call the function from the DLL
-    ext_get_virtual_screens(&info);
+    __internal_get_virtual_screens(&info);
 
     std::wcout << "Buffer Size  : " << ext_get_virtual_screens_buffer_size() << std::endl;
     std::wcout << "Screen Count : " << info.count << std::endl;

@@ -86,9 +86,14 @@ static BOOL CALLBACK MonitorEnum(
     return true;
 }
 
+static char* getGMSBuffAddress(char* _GMSBuffPtrStr) {
+  size_t GMSBuffLongPointer = std::stoull(_GMSBuffPtrStr, NULL, 16);
+    return (char*)GMSBuffLongPointer;
+}
+
 // --- Implementation of Exported Functions ---
 
-BOOL ext_get_virtual_screens(ScreenArrayInfo* info) {
+BOOL __internal_get_virtual_screens(ScreenArrayInfo* info) {
   return EnumDisplayMonitors(
     NULL,
     NULL,
@@ -97,12 +102,24 @@ BOOL ext_get_virtual_screens(ScreenArrayInfo* info) {
   );
 }
 
+double ext_get_virtual_screens(char* buf) {
+    PhysicalScreen screenArray[MAX_SCREENS];
+    ScreenArrayInfo info;
+
+    // Initialize the struct to pass to the library function
+    info.screen = screenArray;
+    info.count = 0;
+    info.maxCount = MAX_SCREENS;
+    info.more = false;
+
+    // Call the function from the DLL
+    if(__internal_get_virtual_screens(&info)) {
+    }
+    
+    return 0;
+}
+
 double ext_get_virtual_screens_buffer_size() {
     size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + sizeof(boolean);
     return buff_size;
-}
-
-char* getGMSBuffAddress(char* _GMSBuffPtrStr) {
-  size_t GMSBuffLongPointer = std::stoull(_GMSBuffPtrStr, NULL, 16);
-    return (char*)GMSBuffLongPointer;
 }
