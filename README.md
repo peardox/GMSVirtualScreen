@@ -10,7 +10,7 @@ cmake -B build
 
 cmake --build build --config Release
 
-Test the DLL with `.\build\bin\Release\TestDLL` and check the output
+Test the DLL with `.\build\bin\Release\TestDLLInternal` and check the output
 
 If running a VC command prompt you can use `dumpbin /EXPORTS .\build\bin\Release\GMSVirtualScreen.dll` to examine the result
 
