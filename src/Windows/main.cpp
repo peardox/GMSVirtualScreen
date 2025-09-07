@@ -17,6 +17,9 @@ int main() {
     __internal_get_virtual_screens(&info);
 
     std::wcout << "Buffer Size  : " << ext_get_virtual_screens_buffer_size() << std::endl;
+    
+    std::wcout << "PhysicalScreen  : " << sizeof(PhysicalScreen) << std::endl;
+    
     std::wcout << "Screen Count : " << info.count << std::endl;
     std::wcout << std::endl;
 

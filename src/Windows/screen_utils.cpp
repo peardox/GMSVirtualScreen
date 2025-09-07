@@ -88,6 +88,11 @@ static BOOL CALLBACK MonitorEnum(
     return true;
 }
 
+size_t get_virtual_screens_buffer_size() {
+    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + (sizeof(uint8_t) * 4);
+    return buff_size;
+}
+
 char* getGMSBuffAddress(char* _GMSBuffPtrStr) {
     /*
         @description    Converts a GMS buffer address string to a usable pointer in C++.
@@ -96,6 +101,20 @@ char* getGMSBuffAddress(char* _GMSBuffPtrStr) {
     */
     size_t GMSBuffLongPointer = stoull(_GMSBuffPtrStr, NULL, 16);//Gets the ptr string into and int64_t.
     return (char*)GMSBuffLongPointer;//Casts the int64_t pointer to char* and returns it so the buffer can be now operated in C++.
+}
+
+// Write a value of type T into buf, advance buf by sizeof(T)
+template<typename T>
+inline char* GMSWrite(char* buf, const T& val) {
+    std::memcpy(buf, &val, sizeof(T));
+    return buf + sizeof(T);
+}
+
+// Specialize bool so it always writes 1 byte (0 or 1)
+inline char* GMSWrite(char* buf, bool val) {
+    uint8_t b = val ? 1 : 0;
+    std::memcpy(buf, &b, sizeof(b));
+    return buf + sizeof(b);
 }
 
 // --- Implementation of Exported Functions ---
@@ -125,12 +144,46 @@ double ext_get_virtual_screens(char* inbuf) {
     
     // Call the function from the DLL
     if(__internal_get_virtual_screens(&info)) {
+        buf = GMSWrite(buf, info.count);
+        buf = GMSWrite(buf, info.maxCount);
+        buf = GMSWrite(buf, info.more);
+        buf = GMSWrite(buf, info.versionMajor);
+        buf = GMSWrite(buf, info.versionMinor);
+        buf = GMSWrite(buf, info.versionBuild);
+        for(int i = 0; i < MAX_SCREENS; i++) {
+            buf = GMSWrite(buf, info.screen[i].infoLevel);
+            buf = GMSWrite(buf, info.screen[i].refreshRate);
+
+            buf = GMSWrite(buf, info.screen[i].pixelRect.width);
+            buf = GMSWrite(buf, info.screen[i].pixelRect.height);
+
+            buf = GMSWrite(buf, info.screen[i].virtualRect.left);
+            buf = GMSWrite(buf, info.screen[i].virtualRect.top);
+            buf = GMSWrite(buf, info.screen[i].virtualRect.width);
+            buf = GMSWrite(buf, info.screen[i].virtualRect.height);
+
+            buf = GMSWrite(buf, info.screen[i].taskbarRect.left);
+            buf = GMSWrite(buf, info.screen[i].taskbarRect.top);
+            buf = GMSWrite(buf, info.screen[i].taskbarRect.width);
+            buf = GMSWrite(buf, info.screen[i].taskbarRect.height);
+
+            buf = GMSWrite(buf, info.screen[i].macmenuRect.left);
+            buf = GMSWrite(buf, info.screen[i].macmenuRect.top);
+            buf = GMSWrite(buf, info.screen[i].macmenuRect.width);
+            buf = GMSWrite(buf, info.screen[i].macmenuRect.height);
+
+            buf = GMSWrite(buf, info.screen[i].physSize.width);
+            buf = GMSWrite(buf, info.screen[i].physSize.height);
+            buf = GMSWrite(buf, info.screen[i].physSize.diagonal);
+
+            // Force isPrimary to store as int32_t to byte pad
+            buf = GMSWrite(buf, (int32_t) info.screen[i].isPrimary);
+        }
     }
     
     return 0;
 }
 
 double ext_get_virtual_screens_buffer_size() {
-    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + sizeof(boolean) + (sizeof(unsigned char) * 3);
-    return buff_size;
+    return get_virtual_screens_buffer_size();
 }

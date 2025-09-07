@@ -14,10 +14,10 @@
 
 // Custom type definition used in the struct
 
-const int MAX_SCREENS = 8;
-const byte GMSVersionMajor = 0;
-const byte GMSVersionMinor = 1;
-const byte GMSVersionBuild = 1;
+constexpr int     MAX_SCREENS = 8;
+constexpr uint8_t GMSVersionMajor = 0;
+constexpr uint8_t GMSVersionMinor = 1;
+constexpr uint8_t GMSVersionBuild = 1;
 
 // Struct definitions that are part of the public API
 struct VirtualRect {
@@ -39,23 +39,23 @@ struct PhysicalSize {
 };
 
 struct PhysicalScreen {
-    NativeBox       pixelRect;
     int32_t         infoLevel;
     int32_t         refreshRate;
-    boolean         isPrimary;
+    NativeBox       pixelRect;
     VirtualRect     virtualRect;
     VirtualRect     taskbarRect;
     VirtualRect     macmenuRect;
     PhysicalSize    physSize;
+    boolean         isPrimary;
 };
 
 struct ScreenArrayInfo {
-    int             count;
-    int             maxCount;
-    boolean         more;
-    unsigned char   versionMajor = GMSVersionMajor;
-    unsigned char   versionMinor = GMSVersionMinor;
-    unsigned char   versionBuild = GMSVersionBuild;
+    int     count;
+    int     maxCount;
+    boolean more;
+    uint8_t versionMajor = GMSVersionMajor;
+    uint8_t versionMinor = GMSVersionMinor;
+    uint8_t versionBuild = GMSVersionBuild;
     PhysicalScreen* screen;
 };
 
