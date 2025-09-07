@@ -120,6 +120,6 @@ double ext_get_virtual_screens(char* buf) {
 }
 
 double ext_get_virtual_screens_buffer_size() {
-    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + sizeof(boolean);
+    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + sizeof(boolean) + (sizeof(byte) * 3);
     return buff_size;
 }

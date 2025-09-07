@@ -15,6 +15,9 @@
 // Custom type definition used in the struct
 
 const int MAX_SCREENS = 8;
+const byte GMSVersionMajor = 0;
+const byte GMSVersionMinor = 1;
+const byte GMSVersionBuild = 1;
 
 // Struct definitions that are part of the public API
 struct VirtualRect {
@@ -49,8 +52,11 @@ struct PhysicalScreen {
 struct ScreenArrayInfo {
     int             count;
     int             maxCount;
-    PhysicalScreen* screen;
     boolean         more;
+    byte            versionMajor = GMSVersionMajor;
+    byte            versionMinor = GMSVersionMinor;
+    byte            versionBuild = GMSVersionBuild;
+    PhysicalScreen* screen;
 };
 
 // Declare the functions that the library will export.
