@@ -2,6 +2,8 @@
 #include <string> // For stoull
 #include <math.h>
 
+using namespace std;
+
 // Helper functions
 
 static VirtualRect RectToScreen(LPRECT lprcMonitor) {
@@ -86,9 +88,14 @@ static BOOL CALLBACK MonitorEnum(
     return true;
 }
 
-static char* getGMSBuffAddress(char* _GMSBuffPtrStr) {
-  size_t GMSBuffLongPointer = std::stoull(_GMSBuffPtrStr, NULL, 16);
-    return (char*)GMSBuffLongPointer;
+char* getGMSBuffAddress(char* _GMSBuffPtrStr) {
+    /*
+        @description    Converts a GMS buffer address string to a usable pointer in C++.
+        @params         {char*} _GMSBuffPtrStr - The ptr to a GMS buffer as a string.
+        @return         {char*} The pointer to the buffer. Now functions like memcpy will work.
+    */
+    size_t GMSBuffLongPointer = stoull(_GMSBuffPtrStr, NULL, 16);//Gets the ptr string into and int64_t.
+    return (char*)GMSBuffLongPointer;//Casts the int64_t pointer to char* and returns it so the buffer can be now operated in C++.
 }
 
 // --- Implementation of Exported Functions ---
@@ -102,7 +109,7 @@ BOOL __internal_get_virtual_screens(ScreenArrayInfo* info) {
   );
 }
 
-double ext_get_virtual_screens(char* buf) {
+double ext_get_virtual_screens(char* inbuf) {
     PhysicalScreen screenArray[MAX_SCREENS];
     ScreenArrayInfo info;
 
@@ -112,6 +119,10 @@ double ext_get_virtual_screens(char* buf) {
     info.maxCount = MAX_SCREENS;
     info.more = false;
 
+    char *buf;
+    
+    buf = getGMSBuffAddress(inbuf);
+    
     // Call the function from the DLL
     if(__internal_get_virtual_screens(&info)) {
     }
@@ -120,6 +131,6 @@ double ext_get_virtual_screens(char* buf) {
 }
 
 double ext_get_virtual_screens_buffer_size() {
-    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + sizeof(boolean) + (sizeof(byte) * 3);
+    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + sizeof(boolean) + (sizeof(unsigned char) * 3);
     return buff_size;
 }

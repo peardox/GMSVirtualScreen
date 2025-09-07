@@ -53,9 +53,9 @@ struct ScreenArrayInfo {
     int             count;
     int             maxCount;
     boolean         more;
-    byte            versionMajor = GMSVersionMajor;
-    byte            versionMinor = GMSVersionMinor;
-    byte            versionBuild = GMSVersionBuild;
+    unsigned char   versionMajor = GMSVersionMajor;
+    unsigned char   versionMinor = GMSVersionMinor;
+    unsigned char   versionBuild = GMSVersionBuild;
     PhysicalScreen* screen;
 };
 
