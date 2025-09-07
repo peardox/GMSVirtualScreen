@@ -6,16 +6,16 @@ Windows Only ATM
 
 ## How to build as DLL
 
-cmake -B build -DGMS_SHARED=ON
-
-cmake --build build --config Release
-
-If running a VC command prompt you can use `dumpbin /EXPORTS build\Release\GMSVirtualScreen.dll` to examine the result
-
-## How to build as Test EXE
-
 cmake -B build
 
 cmake --build build --config Release
 
-Then run `build\Release\GMSVirtualScreen` to test
+Test the DLL with `.\build\bin\Release\TestDLL` and check the output
+
+If running a VC command prompt you can use `dumpbin /EXPORTS .\build\bin\Release\GMSVirtualScreen.dll` to examine the result
+
+## ToDo
+
+Add Taskbar detection for Windowed apps
+Add Mac version
+Add Linux version
