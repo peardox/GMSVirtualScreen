@@ -4,7 +4,7 @@ A GML Extension to query the OS to find the physical sizes of monitors
 
 Windows Only ATM
 
-## How to build as DLL
+## How to build
 
 cmake -B build
 
