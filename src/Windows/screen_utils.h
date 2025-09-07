@@ -47,9 +47,9 @@ struct PhysicalScreen {
 };
 
 struct ScreenArrayInfo {
-    PhysicalScreen* screen;
     int             count;
     int             maxCount;
+    PhysicalScreen* screen;
     boolean         more;
 };
 
