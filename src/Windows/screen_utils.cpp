@@ -89,7 +89,7 @@ static BOOL CALLBACK MonitorEnum(
 }
 
 size_t get_virtual_screens_buffer_size() {
-    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + (sizeof(uint8_t) * 4);
+    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + (sizeof(uint8_t) * 4) + sizeof(uint32_t);
     return buff_size;
 }
 
@@ -138,9 +138,10 @@ double ext_get_virtual_screens(char* inbuf) {
     info.maxCount = MAX_SCREENS;
     info.more = false;
 
-    char *buf;
+//    char *buf;
+    char* buf = getGMSBuffAddress(inbuf);//Interpret the string address form GMS so it can be managed by C++
     
-    buf = getGMSBuffAddress(inbuf);
+//    buf = getGMSBuffAddress(inbuf);
     
     // Call the function from the DLL
     if(__internal_get_virtual_screens(&info)) {
@@ -150,9 +151,10 @@ double ext_get_virtual_screens(char* inbuf) {
         buf = GMSWrite(buf, info.versionMajor);
         buf = GMSWrite(buf, info.versionMinor);
         buf = GMSWrite(buf, info.versionBuild);
-        for(int i = 0; i < MAX_SCREENS; i++) {
+        for(int i = 0; i < info.count; i++) {
             buf = GMSWrite(buf, info.screen[i].infoLevel);
             buf = GMSWrite(buf, info.screen[i].refreshRate);
+            buf = GMSWrite(buf, info.screen[i].isPrimary);
 
             buf = GMSWrite(buf, info.screen[i].pixelRect.width);
             buf = GMSWrite(buf, info.screen[i].pixelRect.height);
@@ -175,10 +177,14 @@ double ext_get_virtual_screens(char* inbuf) {
             buf = GMSWrite(buf, info.screen[i].physSize.width);
             buf = GMSWrite(buf, info.screen[i].physSize.height);
             buf = GMSWrite(buf, info.screen[i].physSize.diagonal);
-
-            // Force isPrimary to store as int32_t to byte pad
-            buf = GMSWrite(buf, (int32_t) info.screen[i].isPrimary);
         }
+        for(int i = info.count; i < MAX_SCREENS; i++) {
+            char nil = 0;
+            for(int j = 0; j<sizeof(PhysicalScreen); j++) {
+                buf = GMSWrite(buf, nil);
+            }
+        }
+        buf = GMSWrite(buf, info.fourcc);
     }
     
     return 0;
@@ -186,4 +192,8 @@ double ext_get_virtual_screens(char* inbuf) {
 
 double ext_get_virtual_screens_buffer_size() {
     return get_virtual_screens_buffer_size();
+}
+
+double ext_get_screens_data_size() {
+    return sizeof(PhysicalScreen);
 }

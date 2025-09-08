@@ -18,6 +18,7 @@ constexpr int     MAX_SCREENS = 8;
 constexpr uint8_t GMSVersionMajor = 0;
 constexpr uint8_t GMSVersionMinor = 1;
 constexpr uint8_t GMSVersionBuild = 1;
+constexpr uint32_t GMEX = 0x474D4558; // "GMEX"
 
 // Struct definitions that are part of the public API
 struct VirtualRect {
@@ -41,12 +42,12 @@ struct PhysicalSize {
 struct PhysicalScreen {
     int32_t         infoLevel;
     int32_t         refreshRate;
+    int32_t         isPrimary;
     NativeBox       pixelRect;
     VirtualRect     virtualRect;
     VirtualRect     taskbarRect;
     VirtualRect     macmenuRect;
     PhysicalSize    physSize;
-    boolean         isPrimary;
 };
 
 struct ScreenArrayInfo {
@@ -57,12 +58,14 @@ struct ScreenArrayInfo {
     uint8_t versionMinor = GMSVersionMinor;
     uint8_t versionBuild = GMSVersionBuild;
     PhysicalScreen* screen;
+    uint32_t fourcc      = GMEX;
 };
 
 // Declare the functions that the library will export.
 // The SCREEN_API macro marks them for export.
 extern "C" SCREEN_API double ext_get_virtual_screens(char* buf);
 extern "C" SCREEN_API double ext_get_virtual_screens_buffer_size();
+extern "C" SCREEN_API double ext_get_screens_data_size();
 extern "C" SCREEN_API BOOL __internal_get_virtual_screens(ScreenArrayInfo* info);
 
 #endif // SCREEN_UTILS_H
