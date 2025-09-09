@@ -29,6 +29,7 @@ static BOOL CALLBACK MonitorEnum(
     info->screen[info->count].taskbarRect = { 0,0,0,0 };
     info->screen[info->count].macmenuRect = { 0,0,0,0 };
     info->screen[info->count].infoLevel = 0;
+    info->autoHideTaskbar = 0;
     
     MONITORINFOEX monitorInfo; // Used to get Primary + Display Name
   
@@ -88,8 +89,8 @@ static BOOL CALLBACK MonitorEnum(
     return true;
 }
 
-size_t get_virtual_screens_buffer_size() {
-    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + (sizeof(uint8_t) * 4) + sizeof(uint32_t);
+inline size_t get_virtual_screens_buffer_size() {
+    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + sizeof(int32_t) + (sizeof(uint8_t) * 4) + sizeof(uint32_t);
     return buff_size;
 }
 
@@ -106,6 +107,10 @@ char* getGMSBuffAddress(char* _GMSBuffPtrStr) {
 // Write a value of type T into buf, advance buf by sizeof(T)
 template<typename T>
 inline char* GMSWrite(char* buf, const T& val) {
+    // Test for current or impending buf ovverflow and return nullptr
+    if((buf == nullptr) || ((buf + sizeof(T)) > (buf + get_virtual_screens_buffer_size()))) {
+        return nullptr;
+    }
     std::memcpy(buf, &val, sizeof(T));
     return buf + sizeof(T);
 }
@@ -113,6 +118,10 @@ inline char* GMSWrite(char* buf, const T& val) {
 // Specialize bool so it always writes 1 byte (0 or 1)
 inline char* GMSWrite(char* buf, bool val) {
     uint8_t b = val ? 1 : 0;
+    // Test for current or impending buf ovverflow and return nullptr
+    if((buf == nullptr) || ((buf + sizeof(b)) > (buf + get_virtual_screens_buffer_size()))) {
+        return nullptr;
+    }
     std::memcpy(buf, &b, sizeof(b));
     return buf + sizeof(b);
 }
@@ -147,6 +156,7 @@ double ext_get_virtual_screens(char* inbuf) {
     if(__internal_get_virtual_screens(&info)) {
         buf = GMSWrite(buf, info.count);
         buf = GMSWrite(buf, info.maxCount);
+        buf = GMSWrite(buf, info.autoHideTaskbar);
         buf = GMSWrite(buf, info.more);
         buf = GMSWrite(buf, info.versionMajor);
         buf = GMSWrite(buf, info.versionMinor);
@@ -178,15 +188,21 @@ double ext_get_virtual_screens(char* inbuf) {
             buf = GMSWrite(buf, info.screen[i].physSize.height);
             buf = GMSWrite(buf, info.screen[i].physSize.diagonal);
         }
-        for(int i = info.count; i < MAX_SCREENS; i++) {
-            char nil = 0;
-            for(int j = 0; j<sizeof(PhysicalScreen); j++) {
-                buf = GMSWrite(buf, nil);
+        if (info.count < MAX_SCREENS) {
+            PhysicalScreen empty = {};
+            for(int i = info.count; i < MAX_SCREENS; i++) {
+                buf = GMSWrite(buf, empty);
             }
         }
-        buf = GMSWrite(buf, info.fourcc);
+            buf = GMSWrite(buf, info.fourcc);
+        // buf will be a nullptr if overflow occurred
+        if(buf != nullptr) {
+        // buf is fine, return 1
+            return 1;
+        }
     }
     
+    // buf is bad, return 1
     return 0;
 }
 

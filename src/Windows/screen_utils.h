@@ -53,10 +53,11 @@ struct PhysicalScreen {
 struct ScreenArrayInfo {
     int     count;
     int     maxCount;
-    boolean more;
-    uint8_t versionMajor = GMSVersionMajor;
-    uint8_t versionMinor = GMSVersionMinor;
-    uint8_t versionBuild = GMSVersionBuild;
+    int32_t autoHideTaskbar; // passed to gml as 4 int32_t for 4 byte alignment
+    boolean more; // 8 bit
+    uint8_t versionMajor = GMSVersionMajor; // 8 bit
+    uint8_t versionMinor = GMSVersionMinor; // 8 bit
+    uint8_t versionBuild = GMSVersionBuild; // 8 bit
     PhysicalScreen* screen;
     uint32_t fourcc      = GMEX;
 };
