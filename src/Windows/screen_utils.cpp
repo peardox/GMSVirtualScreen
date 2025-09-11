@@ -1,6 +1,11 @@
 #include "screen_utils.h"
 #include <string> // For stoull
 #include <math.h>
+#include <stdio.h>
+#include <shellscalingapi.h>
+#include <utility>
+
+#pragma comment(lib, "shcore.lib")
 
 using namespace std;
 
@@ -17,6 +22,37 @@ static VirtualRect RectToScreen(LPRECT lprcMonitor) {
 
 // This is the internal callback function for EnumDisplayMonitors.
 // It is also marked 'static' and kept private to this file.
+#ifdef DO_SCALING
+static int32_t GetMonitorScale(HMONITOR hMon) {
+    DEVICE_SCALE_FACTOR scale;
+    int32_t rv = -1;
+    
+    if(GetScaleFactorForMonitor(hMon, &scale) == S_OK) {
+        switch (scale) {
+            case DEVICE_SCALE_FACTOR_INVALID: rv = 0; break;
+            case SCALE_100_PERCENT: rv = 100; break;
+            case SCALE_120_PERCENT: rv = 120; break;
+            case SCALE_125_PERCENT: rv = 125; break;
+            case SCALE_140_PERCENT: rv = 140; break;
+            case SCALE_150_PERCENT: rv = 150; break;
+            case SCALE_160_PERCENT: rv = 160; break;
+            case SCALE_175_PERCENT: rv = 175; break;
+            case SCALE_180_PERCENT: rv = 180; break;
+            case SCALE_200_PERCENT: rv = 200; break;
+            case SCALE_225_PERCENT: rv = 225; break;
+            case SCALE_250_PERCENT: rv = 250; break;
+            case SCALE_300_PERCENT: rv = 300; break;
+            case SCALE_350_PERCENT: rv = 350; break;
+            case SCALE_400_PERCENT: rv = 400; break;
+            case SCALE_450_PERCENT: rv = 450; break;
+            case SCALE_500_PERCENT: rv = 500; break;
+        }
+    }
+    // fprintf(stderr, "Scale = %d\n", rv);
+    return rv;
+}
+#endif
+
 static BOOL CALLBACK MonitorEnum(
     HMONITOR hMonitor, // Monitor Handle
     HDC hdc, // Unused
@@ -25,10 +61,15 @@ static BOOL CALLBACK MonitorEnum(
     ) {
     ScreenArrayInfo* info = reinterpret_cast<ScreenArrayInfo*>(pData);
 
+    #ifdef DO_SCALING
+    info->screen[info->count].scaleFactor = GetMonitorScale(hMonitor);
+    #endif
+    
     info->screen[info->count].virtualRect = RectToScreen(lprcMonitor);
     info->screen[info->count].taskbarRect = { 0,0,0,0 };
     info->screen[info->count].macmenuRect = { 0,0,0,0 };
     info->screen[info->count].infoLevel = 0;
+
     info->autoHideTaskbar = 0;
     
     MONITORINFOEX monitorInfo; // Used to get Primary + Display Name
@@ -165,6 +206,9 @@ double ext_get_virtual_screens(char* inbuf) {
             buf = GMSWrite(buf, info.screen[i].infoLevel);
             buf = GMSWrite(buf, info.screen[i].refreshRate);
             buf = GMSWrite(buf, info.screen[i].isPrimary);
+            #ifdef DO_SCALING
+            buf = GMSWrite(buf, info.screen[i].scaleFactor);
+            #endif
 
             buf = GMSWrite(buf, info.screen[i].pixelRect.width);
             buf = GMSWrite(buf, info.screen[i].pixelRect.height);

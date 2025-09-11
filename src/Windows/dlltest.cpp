@@ -1,11 +1,22 @@
 #include <iostream>
-#include <cmath> // For abs()
+#include <vector>
+#include <string>
+#include <stdlib.h>
 #include "screen_utils.h" // Include the library's public header
+
+using namespace std;
+
+template<typename T>
+inline const char* GMSRead(const char* buf, T &out)
+{
+    std::memcpy(&out, buf, sizeof(T));
+    return buf + sizeof(T);
+}
 
 int main() {
     // We can only query for a fixed number of screens.
     PhysicalScreen screenArray[MAX_SCREENS];
-    ScreenArrayInfo info;
+    ScreenArrayInfo info = {};
 
     // Initialize the struct to pass to the library function
     info.screen = screenArray;
@@ -13,13 +24,29 @@ int main() {
     info.maxCount = MAX_SCREENS;
     info.more = false;
 
-    // Call the function from the DLL
-    __internal_get_virtual_screens(&info);
+    size_t buf_size = ext_get_virtual_screens_buffer_size();
 
-    std::wcout << "Buffer Size  : " << ext_get_virtual_screens_buffer_size() << std::endl;
+    // Call the GMS function from the DLL
+    char* inbuf;
+    inbuf = (char *) calloc(buf_size, 1);
+    char inptr[17];
+    sprintf(inptr, "%016p", inbuf);
+    memcpy(inbuf, inptr, 17);
+    size_t ext_res = ext_get_virtual_screens(inptr);
+
+    std::wcout << "Buffer Size  : " << buf_size << std::endl;
+    std::wcout << "Call returned  : " << ext_res << std::endl;
     
+    const char *p = inbuf;
+    int32_t v;
+    std::wcout << "Data dump :" << std::endl;
+    for (int i = 0; i < (buf_size >> 2); i++) {
+        p = GMSRead(p, v);
+        std::wcout << v << " ";
+    }
+    std::wcout << std::endl;
     std::wcout << "PhysicalScreen  : " << sizeof(PhysicalScreen) << std::endl;
-    
+    /*
     std::wcout << "Screen Count : " << info.count << std::endl;
     std::wcout << std::endl;
 
@@ -30,9 +57,6 @@ int main() {
         std::wcout << ": isPrimary=" << info.screen[i].isPrimary;
         std::wcout << ", refreshRate=" << info.screen[i].refreshRate;
         std::wcout << ", infoLevel=" << info.screen[i].infoLevel;
-        #ifdef DO_SCALING
-        std::wcout << ", scaleFactor=" << info.screen[i].scaleFactor;
-        #endif
         std::wcout << std::endl;
 
         std::wcout << "pixelRect";
@@ -69,6 +93,7 @@ int main() {
 
         std::wcout << std::endl;
     }
+    */
 
     return 0;
 }

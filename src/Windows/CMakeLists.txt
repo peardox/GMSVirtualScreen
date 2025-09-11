@@ -44,16 +44,18 @@ target_link_libraries(GMSVirtualScreen PUBLIC user32)
 
 # Create an executable target named 'TestInternalDLL' from its source file.
 add_executable(TestDLLInternal main.cpp)
+add_executable(TestDLLExternal dlltest.cpp)
 
 # Link the executable against our 'GMSVirtualScreen' library.
 # CMake handles all the complex details of linking against the import
 # library (.lib) on Windows.
 target_link_libraries(TestDLLInternal PRIVATE GMSVirtualScreen)
+target_link_libraries(TestDLLExternal PRIVATE GMSVirtualScreen)
 
 # This tells CMake where to install the files when we run the install step.
 # The install command will create a folder named "install" inside your
 # build directory by default.
-install(TARGETS TestDLLInternal GMSVirtualScreen
+install(TARGETS TestDLLInternal TestDLLExternal GMSVirtualScreen
   RUNTIME DESTINATION bin  # Install .exe and .dll files to the 'bin' folder
   LIBRARY DESTINATION lib  # Install .lib files (static/import) to 'lib'
   ARCHIVE DESTINATION lib  # Install .lib files (for completeness)

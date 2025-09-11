@@ -4,6 +4,9 @@
 #include <windows.h>
 #include <cstdint> // For int32_t
 
+// In case GMS decides to use it
+// #define DO_SCALING
+
 // This macro handles the keywords for exporting from a DLL
 // and importing into an executable.
 #ifdef SCREEN_UTILS_EXPORTS
@@ -43,6 +46,9 @@ struct PhysicalScreen {
     int32_t         infoLevel;
     int32_t         refreshRate;
     int32_t         isPrimary;
+    #ifdef DO_SCALING
+    int32_t         scaleFactor;
+    #endif
     NativeBox       pixelRect;
     VirtualRect     virtualRect;
     VirtualRect     taskbarRect;
