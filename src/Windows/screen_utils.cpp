@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <shellscalingapi.h>
 #include <utility>
+#include <vector>
+#include <iostream>
 
 #pragma comment(lib, "shcore.lib")
 
@@ -11,47 +13,139 @@ using namespace std;
 
 // Helper functions
 
-static VirtualRect RectToScreen(LPRECT lprcMonitor) {
-    VirtualRect rect;
+static GMSRect RectToGMSRect(LPRECT lprcMonitor) {
+    GMSRect rect;
     rect.left = lprcMonitor->left;
     rect.top = lprcMonitor->top;
-    rect.width = abs(lprcMonitor->left - lprcMonitor->right);
-    rect.height = abs(lprcMonitor->bottom - lprcMonitor->top);
+    rect.right = lprcMonitor->right;
+    rect.bottom = lprcMonitor->bottom;
     return rect;
 }
 
-// This is the internal callback function for EnumDisplayMonitors.
-// It is also marked 'static' and kept private to this file.
-#ifdef DO_SCALING
-static int32_t GetMonitorScale(HMONITOR hMon) {
-    DEVICE_SCALE_FACTOR scale;
-    int32_t rv = -1;
+static GMSRect RectToGMSRect(RECT rcMonitor) {
+    GMSRect rect;
+    rect.left = rcMonitor.left;
+    rect.top = rcMonitor.top;
+    rect.right = rcMonitor.right;
+    rect.bottom = rcMonitor.bottom;
+    return rect;
+}
+
+// Function to get monitor friendly name for a specific HMONITORINFOEX
+std::string GetMonitorFriendlyName(MONITORINFOEX monitorInfo, bool& okflag)
+{
+	okflag = false;
+	
+    vector<DISPLAYCONFIG_PATH_INFO> paths;
+    vector<DISPLAYCONFIG_MODE_INFO> modes;
+    UINT32 flags = QDC_ONLY_ACTIVE_PATHS | QDC_VIRTUAL_MODE_AWARE;
+    LONG result = ERROR_SUCCESS;
+
+    do
+    {
+        UINT32 pathCount, modeCount;
+        result = GetDisplayConfigBufferSizes(flags, &pathCount, &modeCount);
+
+        if (result != ERROR_SUCCESS)
+        {
+            return "Unknown Monitor";
+        }
+
+        paths.resize(pathCount);
+        modes.resize(modeCount);
+
+        result = QueryDisplayConfig(flags, &pathCount, paths.data(), &modeCount, modes.data(), nullptr);
+
+        paths.resize(pathCount);
+        modes.resize(modeCount);
+
+    } while (result == ERROR_INSUFFICIENT_BUFFER);
+
+    if (result != ERROR_SUCCESS)
+    {
+        return "Unknown Monitor";
+    }
+
+    // Convert the narrow device name to wide string for comparison
+    int wideLength = MultiByteToWideChar(CP_ACP, 0, monitorInfo.szDevice, -1, nullptr, 0);
+    if (wideLength <= 0)
+    {
+        return "Unknown Monitor";
+    }
     
-    if(GetScaleFactorForMonitor(hMon, &scale) == S_OK) {
-        switch (scale) {
-            case DEVICE_SCALE_FACTOR_INVALID: rv = 0; break;
-            case SCALE_100_PERCENT: rv = 100; break;
-            case SCALE_120_PERCENT: rv = 120; break;
-            case SCALE_125_PERCENT: rv = 125; break;
-            case SCALE_140_PERCENT: rv = 140; break;
-            case SCALE_150_PERCENT: rv = 150; break;
-            case SCALE_160_PERCENT: rv = 160; break;
-            case SCALE_175_PERCENT: rv = 175; break;
-            case SCALE_180_PERCENT: rv = 180; break;
-            case SCALE_200_PERCENT: rv = 200; break;
-            case SCALE_225_PERCENT: rv = 225; break;
-            case SCALE_250_PERCENT: rv = 250; break;
-            case SCALE_300_PERCENT: rv = 300; break;
-            case SCALE_350_PERCENT: rv = 350; break;
-            case SCALE_400_PERCENT: rv = 400; break;
-            case SCALE_450_PERCENT: rv = 450; break;
-            case SCALE_500_PERCENT: rv = 500; break;
+    wstring monitorDeviceName(wideLength - 1, L'\0'); // -1 to exclude null terminator
+    MultiByteToWideChar(CP_ACP, 0, monitorInfo.szDevice, -1, &monitorDeviceName[0], wideLength);
+
+    // Find the matching path by comparing device names
+    for (auto& path : paths)
+    {
+        // Get the source device name for this path
+        DISPLAYCONFIG_SOURCE_DEVICE_NAME sourceName = {};
+        sourceName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+        sourceName.header.size = sizeof(sourceName);
+        sourceName.header.adapterId = path.sourceInfo.adapterId;
+        sourceName.header.id = path.sourceInfo.id;
+
+        result = DisplayConfigGetDeviceInfo(&sourceName.header);
+        if (result == ERROR_SUCCESS)
+        {
+            // Compare the source device name with our monitor's device name
+            if (monitorDeviceName == sourceName.viewGdiDeviceName)
+            {
+                // Found matching path, now get the target (monitor) friendly name
+                DISPLAYCONFIG_TARGET_DEVICE_NAME targetName = {};
+                targetName.header.adapterId = path.targetInfo.adapterId;
+                targetName.header.id = path.targetInfo.id;
+                targetName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
+                targetName.header.size = sizeof(targetName);
+                
+                result = DisplayConfigGetDeviceInfo(&targetName.header);
+                if (result != ERROR_SUCCESS)
+                {
+                    return "Unknown Monitor";
+                }
+
+                // Prefer EDID friendly name, fallback to monitor friendly device name
+                const wchar_t* nameToUse = nullptr;
+                if (targetName.flags.friendlyNameFromEdid && wcslen(targetName.monitorFriendlyDeviceName) > 0)
+                {
+                    nameToUse = targetName.monitorFriendlyDeviceName;
+                }
+                else if (wcslen(targetName.monitorFriendlyDeviceName) > 0)
+                {
+                    nameToUse = targetName.monitorFriendlyDeviceName;
+                }
+
+                if (nameToUse == nullptr)
+                {
+					okflag = true;
+                    return "Internal Display";
+                }
+
+                // Convert wide string to UTF-8 string
+                int utf8Length = WideCharToMultiByte(
+                    CP_UTF8, 0, nameToUse, -1, nullptr, 0, nullptr, nullptr
+                );
+
+                if (utf8Length <= 0)
+                {
+                    return "Unknown Monitor";
+                }
+
+                string friendlyName(utf8Length - 1, '\0'); // -1 to exclude null terminator
+                WideCharToMultiByte(
+                    CP_UTF8, 0, nameToUse, -1, 
+                    &friendlyName[0], utf8Length, nullptr, nullptr
+                );
+
+			    okflag = true;
+                return friendlyName;
+            }
         }
     }
-    // fprintf(stderr, "Scale = %d\n", rv);
-    return rv;
+
+    return "Unknown Monitor";
 }
-#endif
 
 static BOOL CALLBACK MonitorEnum(
     HMONITOR hMonitor, // Monitor Handle
@@ -59,16 +153,16 @@ static BOOL CALLBACK MonitorEnum(
     LPRECT lprcMonitor, // Scaled rect of this screen
     LPARAM pData // For passing data around
     ) {
-    ScreenArrayInfo* info = reinterpret_cast<ScreenArrayInfo*>(pData);
-
-    #ifdef DO_SCALING
-    info->screen[info->count].scaleFactor = GetMonitorScale(hMonitor);
-    #endif
-    
-    info->screen[info->count].virtualRect = RectToScreen(lprcMonitor);
-    info->screen[info->count].taskbarRect = { 0,0,0,0 };
-    info->screen[info->count].macmenuRect = { 0,0,0,0 };
-    info->screen[info->count].infoLevel = 0;
+    ScreenInfo* info = reinterpret_cast<ScreenInfo*>(pData);
+/*
+    if (info->count < (info->pageNum * MAX_SCREENS)) {
+        info->count++;
+        return true;
+    }
+*/
+    info->screen[info->count].virtualRect = RectToGMSRect(lprcMonitor);
+    info->screen[info->count].workingRect = { 0,0,0,0 };
+    info->screen[info->count].errorCode = 0;
 
     info->autoHideTaskbar = 0;
     
@@ -76,8 +170,17 @@ static BOOL CALLBACK MonitorEnum(
   
     monitorInfo.cbSize = sizeof(MONITORINFOEX);
     if (GetMonitorInfo(hMonitor, &monitorInfo)) {
-        info->screen[info->count].infoLevel = 1;
+		bool nameok;
+ 		std:string mn = GetMonitorFriendlyName(monitorInfo, nameok);
+		if(!nameok) {
+            info->screen[info->count].errorCode |= 8;
+		}
+		
+		std::strncpy(info->screen[info->count].name, mn.c_str(), MONITOR_NAME_BUFFER_SIZE - 1);
+		info->screen[info->count].name[MONITOR_NAME_BUFFER_SIZE - 1] = '\0';
+		
         info->screen[info->count].isPrimary = (monitorInfo.dwFlags & MONITORINFOF_PRIMARY);
+		info->screen[info->count].workingRect = RectToGMSRect(monitorInfo.rcWork);
 
         // --- Get Native/Physical Pixel Resolution using EnumDisplaySettingsEx ---
         // This gives the true resolution of the monitor's current display mode.
@@ -87,15 +190,13 @@ static BOOL CALLBACK MonitorEnum(
 
         if (EnumDisplaySettingsEx(monitorInfo.szDevice, ENUM_CURRENT_SETTINGS,
                                   &devMode, 0)) {
-            info->screen[info->count].infoLevel         = 2;
-            info->screen[info->count].pixelRect.width   = devMode.dmPelsWidth;
-            info->screen[info->count].pixelRect.height  = devMode.dmPelsHeight;
+            info->screen[info->count].pixelBox.width   = devMode.dmPelsWidth;
+            info->screen[info->count].pixelBox.height  = devMode.dmPelsHeight;
             info->screen[info->count].refreshRate       = devMode.dmDisplayFrequency;
 
             // --- Get physical dimensions (mm) using GetDeviceCaps ---
             HDC hdc = CreateDC(monitorInfo.szDevice, nullptr, nullptr, nullptr);
             if (hdc) {
-                info->screen[info->count].infoLevel = 3;
                 int32_t pwidth = GetDeviceCaps(hdc, HORZSIZE); // Physical width in mm
                 info->screen[info->count].physSize.width = pwidth;
                 int32_t pheight = GetDeviceCaps(hdc, VERTSIZE); // Physical height in mm
@@ -104,22 +205,22 @@ static BOOL CALLBACK MonitorEnum(
                 
                 DeleteDC(hdc); // Always release the DC
             } else {
+                info->screen[info->count].errorCode |= 4;
                 info->screen[info->count].physSize = { 0, 0, 0 };
             }
 
 
         } else {
-            info->screen[info->count].pixelRect = { 0,0 };
+            info->screen[info->count].errorCode |= 2;
+            info->screen[info->count].pixelBox = { 0,0 };
             info->screen[info->count].refreshRate = 0;
         }
         
-        // fprintf(stderr, "deviceName = %s\n", deviceName.c_str());
     } else {
+        info->screen[info->count].errorCode |= 1;
         info->screen[info->count].isPrimary = false;
     }
     
-    
-
     info->count++;
 
     if (info->count == info->maxCount) {
@@ -130,8 +231,27 @@ static BOOL CALLBACK MonitorEnum(
     return true;
 }
 
-inline size_t get_virtual_screens_buffer_size() {
-    size_t buff_size = (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(int) + sizeof(int) + sizeof(int32_t) + (sizeof(uint8_t) * 4) + sizeof(uint32_t);
+static inline size_t rezol_get_buffer_size(int32_t which) {
+    size_t buff_size;
+    
+    switch(which) {
+        case SCREENINFOHEADER:
+            buff_size = (5 * sizeof(int32_t)) + (4 * sizeof(uint8_t));
+            break;
+        case SCREENINFO:
+            buff_size = (5 * sizeof(int32_t)) + (4 * sizeof(uint8_t)) + (sizeof(PhysicalScreen) * MAX_SCREENS) + sizeof(uint32_t);
+            break;
+        case PHYSICALSCREEN:
+            buff_size = sizeof(PhysicalScreen);
+            break;
+        case WINDOWCHROME:
+            buff_size = sizeof(WindowChrome);
+            break;
+        default:
+            buff_size = 0;
+            break;
+    }
+    
     return buff_size;
 }
 
@@ -149,7 +269,7 @@ char* getGMSBuffAddress(char* _GMSBuffPtrStr) {
 template<typename T>
 inline char* GMSWrite(char* buf, const T& val) {
     // Test for current or impending buf ovverflow and return nullptr
-    if((buf == nullptr) || ((buf + sizeof(T)) > (buf + get_virtual_screens_buffer_size()))) {
+    if((buf == nullptr) || ((buf + sizeof(T)) > (buf + rezol_get_buffer_size(SCREENINFO)))) {
         return nullptr;
     }
     std::memcpy(buf, &val, sizeof(T));
@@ -160,7 +280,7 @@ inline char* GMSWrite(char* buf, const T& val) {
 inline char* GMSWrite(char* buf, bool val) {
     uint8_t b = val ? 1 : 0;
     // Test for current or impending buf ovverflow and return nullptr
-    if((buf == nullptr) || ((buf + sizeof(b)) > (buf + get_virtual_screens_buffer_size()))) {
+    if((buf == nullptr) || ((buf + sizeof(b)) > (buf + rezol_get_buffer_size(SCREENINFO)))) {
         return nullptr;
     }
     std::memcpy(buf, &b, sizeof(b));
@@ -169,7 +289,7 @@ inline char* GMSWrite(char* buf, bool val) {
 
 // --- Implementation of Exported Functions ---
 
-BOOL __internal_get_virtual_screens(ScreenArrayInfo* info) {
+BOOL __internal_get_virtual_screens(ScreenInfo* info) {
   return EnumDisplayMonitors(
     NULL,
     NULL,
@@ -178,14 +298,16 @@ BOOL __internal_get_virtual_screens(ScreenArrayInfo* info) {
   );
 }
 
-double ext_get_virtual_screens(char* inbuf) {
+double get_screen_info(char* inbuf, uint32_t pageNum) {
     PhysicalScreen screenArray[MAX_SCREENS];
-    ScreenArrayInfo info;
+    ScreenInfo info;
 
     // Initialize the struct to pass to the library function
     info.screen = screenArray;
     info.count = 0;
     info.maxCount = MAX_SCREENS;
+    info.fromScreen = pageNum * MAX_SCREENS; 
+    info.pageNum = pageNum;
     info.more = false;
 
 //    char *buf;
@@ -197,40 +319,36 @@ double ext_get_virtual_screens(char* inbuf) {
     if(__internal_get_virtual_screens(&info)) {
         buf = GMSWrite(buf, info.count);
         buf = GMSWrite(buf, info.maxCount);
+        buf = GMSWrite(buf, info.fromScreen);
+        buf = GMSWrite(buf, info.pageNum);
         buf = GMSWrite(buf, info.autoHideTaskbar);
         buf = GMSWrite(buf, info.more);
         buf = GMSWrite(buf, info.versionMajor);
         buf = GMSWrite(buf, info.versionMinor);
         buf = GMSWrite(buf, info.versionBuild);
         for(int i = 0; i < info.count; i++) {
-            buf = GMSWrite(buf, info.screen[i].infoLevel);
+            buf = GMSWrite(buf, info.screen[i].errorCode);
             buf = GMSWrite(buf, info.screen[i].refreshRate);
             buf = GMSWrite(buf, info.screen[i].isPrimary);
-            #ifdef DO_SCALING
-            buf = GMSWrite(buf, info.screen[i].scaleFactor);
-            #endif
 
-            buf = GMSWrite(buf, info.screen[i].pixelRect.width);
-            buf = GMSWrite(buf, info.screen[i].pixelRect.height);
+            buf = GMSWrite(buf, info.screen[i].pixelBox.width);
+            buf = GMSWrite(buf, info.screen[i].pixelBox.height);
 
             buf = GMSWrite(buf, info.screen[i].virtualRect.left);
             buf = GMSWrite(buf, info.screen[i].virtualRect.top);
-            buf = GMSWrite(buf, info.screen[i].virtualRect.width);
-            buf = GMSWrite(buf, info.screen[i].virtualRect.height);
+            buf = GMSWrite(buf, info.screen[i].virtualRect.right);
+            buf = GMSWrite(buf, info.screen[i].virtualRect.bottom);
 
-            buf = GMSWrite(buf, info.screen[i].taskbarRect.left);
-            buf = GMSWrite(buf, info.screen[i].taskbarRect.top);
-            buf = GMSWrite(buf, info.screen[i].taskbarRect.width);
-            buf = GMSWrite(buf, info.screen[i].taskbarRect.height);
-
-            buf = GMSWrite(buf, info.screen[i].macmenuRect.left);
-            buf = GMSWrite(buf, info.screen[i].macmenuRect.top);
-            buf = GMSWrite(buf, info.screen[i].macmenuRect.width);
-            buf = GMSWrite(buf, info.screen[i].macmenuRect.height);
+            buf = GMSWrite(buf, info.screen[i].workingRect.left);
+            buf = GMSWrite(buf, info.screen[i].workingRect.top);
+            buf = GMSWrite(buf, info.screen[i].workingRect.right);
+            buf = GMSWrite(buf, info.screen[i].workingRect.bottom);
 
             buf = GMSWrite(buf, info.screen[i].physSize.width);
             buf = GMSWrite(buf, info.screen[i].physSize.height);
             buf = GMSWrite(buf, info.screen[i].physSize.diagonal);
+
+            buf = GMSWrite(buf, info.screen[i].name);
         }
         if (info.count < MAX_SCREENS) {
             PhysicalScreen empty = {};
@@ -242,18 +360,29 @@ double ext_get_virtual_screens(char* inbuf) {
         // buf will be a nullptr if overflow occurred
         if(buf != nullptr) {
         // buf is fine, return 1
-            return 1;
+            return 0;
         }
     }
     
     // buf is bad, return 1
+    return 1;
+}
+
+double rezol_ext_get_screen_info(char* inbuf) {
+    return get_screen_info(inbuf, 0);
+}
+
+double rezol_ext_get_screen_info_page(char* buf, double pageNum) {
+    return get_screen_info(buf, pageNum);
+}
+
+double rezol_ext_get_window_chrome(char* buf, char* handle) {
+    HWND ptr = HWND(handle);
+    fprintf(stderr, "Handle = %p\n", ptr);
     return 0;
 }
 
-double ext_get_virtual_screens_buffer_size() {
-    return get_virtual_screens_buffer_size();
-}
 
-double ext_get_screens_data_size() {
-    return sizeof(PhysicalScreen);
+double rezol_ext_get_buffer_size(double which) {
+    return rezol_get_buffer_size(which);
 }

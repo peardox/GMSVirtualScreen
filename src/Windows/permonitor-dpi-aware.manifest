@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity version="1.0.0.0"
+                    processorArchitecture="*"
+                    name="MyCompany.MyApp"
+                    type="win32"/>
+  <application>
+    <!--
+      true/PM = Per-monitor DPI aware on Windows 8.1+,
+                and fall back to system DPI on Win7.
+    -->
+    <dpiAware>true/PM</dpiAware>
+  </application>
+</assembly>

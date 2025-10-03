@@ -14,9 +14,11 @@ inline const char* GMSRead(const char* buf, T &out)
 }
 
 int main() {
+	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+	
     // We can only query for a fixed number of screens.
     PhysicalScreen screenArray[MAX_SCREENS];
-    ScreenArrayInfo info = {};
+    ScreenInfo info = {};
 
     // Initialize the struct to pass to the library function
     info.screen = screenArray;
@@ -24,7 +26,7 @@ int main() {
     info.maxCount = MAX_SCREENS;
     info.more = false;
 
-    size_t buf_size = ext_get_virtual_screens_buffer_size();
+    size_t buf_size = rezol_ext_get_buffer_size(SCREENINFO);
 
     // Call the GMS function from the DLL
     char* inbuf;
@@ -32,7 +34,7 @@ int main() {
     char inptr[17];
     sprintf(inptr, "%016p", inbuf);
     memcpy(inbuf, inptr, 17);
-    size_t ext_res = ext_get_virtual_screens(inptr);
+    size_t ext_res = rezol_ext_get_screen_info(inptr);
 
     std::wcout << "Buffer Size  : " << buf_size << std::endl;
     std::wcout << "Call returned  : " << ext_res << std::endl;
@@ -45,7 +47,7 @@ int main() {
         std::wcout << v << " ";
     }
     std::wcout << std::endl;
-    std::wcout << "PhysicalScreen  : " << sizeof(PhysicalScreen) << std::endl;
+    std::wcout << "PhysicalScreen  : " << rezol_ext_get_buffer_size(PHYSICALSCREEN) << std::endl;
     /*
     std::wcout << "Screen Count : " << info.count << std::endl;
     std::wcout << std::endl;
@@ -56,33 +58,26 @@ int main() {
         std::wcout << "info ";
         std::wcout << ": isPrimary=" << info.screen[i].isPrimary;
         std::wcout << ", refreshRate=" << info.screen[i].refreshRate;
-        std::wcout << ", infoLevel=" << info.screen[i].infoLevel;
+        std::wcout << ", errorCode=" << info.screen[i].errorCode;
         std::wcout << std::endl;
 
-        std::wcout << "pixelRect";
-        std::wcout << ": Width=" << info.screen[i].pixelRect.width;
-        std::wcout << ", Height=" << info.screen[i].pixelRect.height;
+        std::wcout << "pixelBox";
+        std::wcout << ": Width=" << info.screen[i].pixelBox.width;
+        std::wcout << ", Height=" << info.screen[i].pixelBox.height;
         std::wcout << std::endl;
 
         std::wcout << "virtRect ";
         std::wcout << ": Left=" << info.screen[i].virtualRect.left;
         std::wcout << ", Top=" << info.screen[i].virtualRect.top;
-        std::wcout << ", Width=" << info.screen[i].virtualRect.width;
-        std::wcout << ", Height=" << info.screen[i].virtualRect.height;
+        std::wcout << ", Width=" << info.screen[i].virtualRect.right;
+        std::wcout << ", Height=" << info.screen[i].virtualRect.bottom;
         std::wcout << std::endl;
 
-        std::wcout << "taskRect ";
-        std::wcout << ": Left=" << info.screen[i].taskbarRect.left;
-        std::wcout << ", Top=" << info.screen[i].taskbarRect.top;
-        std::wcout << ", Width=" << info.screen[i].taskbarRect.width;
-        std::wcout << ", Height=" << info.screen[i].taskbarRect.height;
-        std::wcout << std::endl;
-
-        std::wcout << "menuRect ";
-        std::wcout << ": Left=" << info.screen[i].macmenuRect.left;
-        std::wcout << ", Top=" << info.screen[i].macmenuRect.top;
-        std::wcout << ", Width=" << info.screen[i].macmenuRect.width;
-        std::wcout << ", Height=" << info.screen[i].macmenuRect.height;
+        std::wcout << "workRect ";
+        std::wcout << ": Left=" << info.screen[i].workingRect.left;
+        std::wcout << ", Top=" << info.screen[i].workingRect.top;
+        std::wcout << ", Width=" << info.screen[i].workingRect.right;
+        std::wcout << ", Height=" << info.screen[i].workingRect.bottom;
         std::wcout << std::endl;
 
         std::wcout << "physSize ";

@@ -43,8 +43,9 @@ target_link_libraries(GMSVirtualScreen PUBLIC user32)
 # --- 2. Define the Executable ---
 
 # Create an executable target named 'TestInternalDLL' from its source file.
-add_executable(TestDLLInternal main.cpp)
-add_executable(TestDLLExternal dlltest.cpp)
+add_executable(TestDLLInternal TestDLLInternal.cpp)
+add_executable(TestDLLExternal TestDLLExternal.cpp)
+
 
 # Link the executable against our 'GMSVirtualScreen' library.
 # CMake handles all the complex details of linking against the import
@@ -60,6 +61,10 @@ install(TARGETS TestDLLInternal TestDLLExternal GMSVirtualScreen
   LIBRARY DESTINATION lib  # Install .lib files (static/import) to 'lib'
   ARCHIVE DESTINATION lib  # Install .lib files (for completeness)
 )
+
+#install(TARGETS GMSVirtualScreen
+#  RUNTIME DESTINATION ../dll  # Install .exe and .dll files to the 'bin' folder
+#)
 
 # Also install the public header file so other projects could use this library.
 install(FILES screen_utils.h DESTINATION include)
